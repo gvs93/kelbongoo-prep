@@ -331,71 +331,49 @@ function initFirebase(){
     firebase.initializeApp({databaseURL:FIREBASE_URL});
     db=firebase.database();
     dbRef=db.ref("prep_3004v3");
-    dbRef.on("value",snap=>{
-      const data=snap.val();
-      // Au premier chargement : tenter de récupérer la sauvegarde locale si elle est PLUS récente
-      if(!hasLoadedFromFirebase){
-        let useFirebase = true;
-        try{
-          const localBackup = localStorage.getItem(LOCAL_KEY);
-          if(localBackup){
-            const local = JSON.parse(localBackup);
-            const localScore = stateScore(local);
-            const firebaseScore = data ? stateScore(data) : 0;
-            // Si la sauvegarde locale a plus de données ET est de moins de 6h
-            const ageHours = (Date.now()-(local.timestamp||0))/3600000;
-            if(localScore > firebaseScore && ageHours < 6){
-              const useLocal = confirm("⚠️ Données locales plus récentes détectées !\n\n"
-                +"Firebase: "+firebaseScore+" actions\n"
-                +"Local ("+local.user+"): "+localScore+" actions ("+Math.round(ageHours*60)+"min)\n\n"
-                +"Restaurer les données locales sur Firebase ?");
-              if(useLocal){
-                doneProducts=local.doneProducts||{};
-                ruptures=local.ruptures||{};
-                poidsAnomalies=local.poidsAnomalies||{};
-                casierMap=local.casierMap||casierMap;
-                counters=local.counters||counters;
-                preparedBy=local.preparedBy||{};
-                useFirebase=false;
-                hasLoadedFromFirebase=true;
-                lastFirebaseScore=stateScore({doneProducts,ruptures,poidsAnomalies});
-                showApp();renderAll();
-                // Pousser sur Firebase pour restaurer
-                setTimeout(()=>forceSave(),500);
-                return;
-              }
-            }
-          }
-        }catch(e){console.error("Local backup check failed",e);}
-        if(useFirebase && data){
-          if(data.doneProducts)  doneProducts=data.doneProducts;
-          if(data.ruptures)      ruptures=data.ruptures;
-          if(data.poidsAnomalies)poidsAnomalies=data.poidsAnomalies;
-          if(data.casierMap)     casierMap=data.casierMap;
-          if(data.counters)      counters=data.counters;
-          if(data.preparedBy)    preparedBy=data.preparedBy;
-        }
-        hasLoadedFromFirebase=true;
-        lastFirebaseScore=data?stateScore(data):0;
-      } else {
-        // Mises à jour suivantes : on accepte normalement (autre tablette qui a fait des modifs)
-        if(data){
-          if(data.doneProducts)  doneProducts=data.doneProducts;
-          if(data.ruptures)      ruptures=data.ruptures;
-          if(data.poidsAnomalies)poidsAnomalies=data.poidsAnomalies;
-          if(data.casierMap)     casierMap=data.casierMap;
-          if(data.counters)      counters=data.counters;
-          if(data.preparedBy)    preparedBy=data.preparedBy;
-          lastFirebaseScore=stateScore(data);
-        }
-      }
-      saveLocalBackup();
-      showApp();renderAll();
-    },err=>{
-      setLoadTxt("Erreur: "+err.message);
-      setSyncUI("err","Hors-ligne");
-      showApp();renderAll();
-    });
+
+    //CORRECTION CHAT//
+   dbRef.on("value", (snap) => {
+  const data = snap.val() || {};
+
+  const firstLoad = !hasLoadedFromFirebase;
+  hasLoadedFromFirebase = true;
+
+  if (data.doneProducts) {
+    doneProducts = { ...doneProducts, ...data.doneProducts };
+  }
+
+  if (data.ruptures) {
+    ruptures = { ...ruptures, ...data.ruptures };
+  }
+
+  if (data.preparedBy) {
+    preparedBy = { ...preparedBy, ...data.preparedBy };
+  }
+
+  if (data.poidsAnomalies) {
+    poidsAnomalies = { ...poidsAnomalies, ...data.poidsAnomalies };
+  }
+
+  if (data.counters) {
+    counters = { ...counters, ...data.counters };
+  }
+
+  if (data.casierMap) {
+    casierMap = { ...casierMap, ...data.casierMap };
+  }
+
+  if(firstLoad){
+    showApp();
+  }
+
+  renderAll();
+});
+    //FIN CHAT POUR BUG DES EFFACEMENTS///29/04 19H11
+    
+
+
+    
   }catch(e){
     setLoadTxt("Erreur: "+e.message);
     setTimeout(()=>{showApp();renderAll();},1500);
