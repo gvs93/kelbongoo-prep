@@ -657,15 +657,23 @@ function markFull(site,client){
   pushHistory();
   const k=ckey(site,client);
   const cur=getCasiers(site,client);
-  const newNum=counters[site]++;
+  // sécurité compteur
+  if(!counters[site]) counters[site] = 36;
+
+  // ✅ incrément CORRECT
+  const newNum = ++counters[site];
+  
   casierMap[k+"__prev"]=[...(casierMap[k+"__prev"]||[]),...cur];
   casierMap[k]=[...cur,newNum];
   renderAll();
+  
   toast(pfx(site)+" "+newNum+" créé pour "+client.split(" ")[0]);
-  // Atomic writes pour casierMap et counters
-  atomicWrite("casierMap/"+fbKey(k),casierMap[k]);
-  atomicWrite("casierMap/"+fbKey(k+"__prev"),casierMap[k+"__prev"]);
-  atomicWrite("counters/"+site,counters[site]);
+  
+// sync Firebase
+  atomicWrite("casierMap/"+fbKey(k), casierMap[k]);
+  atomicWrite("casierMap/"+fbKey(k+"__prev"), casierMap[k+"__prev"]);
+  atomicWrite("counters/"+site, counters[site]);
+
   saveLocalBackup();
 }
 
